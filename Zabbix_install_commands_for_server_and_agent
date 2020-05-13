@@ -1,0 +1,156 @@
+==================server installation==================
+
+------Zabbix 4.4 CentOS 7 repositories------
+sudo rpm -ivh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm
+
+
+-----Disable SELinux------
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+
+------Installing Zabbix 4.4 Server, agent and web front-end------
+sudo yum install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-get zabbix-sender zabbix-java-gateway -y
+
+
+
+
+
+------Install MariaDB Server, enable and start it------
+sudo yum -y install mariadb-server mariadb
+sudo systemctl enable mariadb.service
+sudo systemctl start mariadb.service
+
+------Secure your MariaDB installation-------
+sudo mysql_secure_installation
+enter
+(password zabbix)
+(confirm password zabbix)
+y
+y
+y
+y
+y
+
+------Create your Zabbix database and user------
+sudo mysql -uroot -pzabbix
+MariaDB> create database zabbix character set utf8 collate utf8_bin;
+MariaDB> grant all privileges on zabbix.* to zabbix@localhost identified by 'zabbix';
+MariaDB> quit;
+
+
+------Import initial schema and data-------
+cd /usr/share/doc/zabbix-server-mysql-4.4.8/
+zcat create.sql.gz | mysql -uroot -p zabbix
+
+
+------Configure Zabbix Server-------
+sudo vi /etc/zabbix/zabbix_server.conf
+DBHost=localhost
+DBName=zabbix
+DBUser=zabbix
+DBPassword=<password>
+
+------Specify the timezone of your web front-end------
+sudo vi /etc/httpd/conf.d/zabbix.conf
+php_value date.timezone Europe/Moscow
+
+
+------Enable and start your Zabbix Server, agent and HTTPD service-----
+
+
+sudo systemctl enable zabbix-server
+sudo systemctl enable zabbix-agent
+sudo systemctl enable httpd
+sudo systemctl start zabbix-server
+sudo systemctl start zabbix-agent
+sudo systemctl start httpd
+
+
+sudo firewall-cmd --permanent --add-port=10050/tcp
+sudo firewall-cmd --permanent --add-port=10051/tcp
+sudo firewall-cmd --permanent --add-port=80/tcp
+sudo firewall-cmd --reload 
+sudo systemctl restart firewalld
+sudo setsebool -P httpd_can_connect_zabbix=1
+sudo systemctl start zabbix-server
+sudo systemctl enable zabbix-server
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl restart httpd
+
+
+--------------check--------------
+http://192.168.11.101/zabbix/
+
+
+[vagrant@zabbixserever /]$ history
+    1  sudo rpm -ivh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm
+    2  sudo yum install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-get zabbix-sender zabbix-java-gateway -y
+    3  sudo setenforce 0
+    4  sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+    5  sudo yum install zabbix-server-mysql zabbix-web-mysql zabbix-agent zabbix-get zabbix-sender zabbix-java-gateway -y
+    6  sudo yum -y install mariadb-server mariadb
+    7  sudo systemctl enable mariadb.service
+    8  sudo systemctl start mariadb.service
+    9  sudo systemctl status mariadb.service
+   10  sudo mysql_secure_installation
+   11  sudo mysql -uroot -pzabbix
+   12  cd /usr/share/doc/zabbix-server-mysql-4.4.8/
+   13  zcat create.sql.gz | mysql -uroot -p zabbix
+   14  sudo vi /etc/zabbix/zabbix_server.conf
+   15  sudo vi /etc/httpd/conf.d/zabbix.conf
+   16  sudo cat /etc/httpd/conf.d/zabbix.conf
+   17  sudo systemctl enable zabbix-server
+   18  sudo systemctl enable zabbix-agent
+   19  sudo systemctl enable httpd
+   20  sudo systemctl start zabbix-server
+   21  sudo systemctl start zabbix-agent
+   22  sudo systemctl start httpd
+   23  sudo systemctl status zabbix-server
+   24  sudo firewall-cmd --permanent --add-port=10050/tcp
+   25  sudo firewall-cmd --permanent --add-port=10051/tcp
+   26  sudo firewall-cmd --permanent --add-port=80/tcp
+   27  sudo setsebool -P httpd_can_connect_zabbix=1
+   28  history
+
+
+
+==================agent installation==================
+
+------Zabbix 4.4 CentOS 7 repositories------
+sudo rpm -ivh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm
+
+
+-----Disable SELinux------
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+
+------Installing Zabbix 4.4 agent------
+sudo yum install zabbix-agent zabbix-sender zabbix-java-gateway -y
+
+
+------Configure Server IP on Zabbix agent side-------
+sudo vi /etc/zabbix/zabbix_agentd.conf
+Server=192.168.11.101
+ServerActive=192.168.11.101
+
+
+------Enable and start Zabbix Agent-----
+sudo systemctl start zabbix-agent
+sudo systemctl enable zabbix-agent
+
+
+[vagrant@zabbixagent ~]$ history
+    1  sudo rpm -ivh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm
+    2  sudo setenforce 0
+    3  sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+    4  sudo yum install zabbix-agent zabbix-sender zabbix-java-gateway -y
+    5  cat /etc/zabbix/zabbix_agentd.conf | grep Server
+    6  sudo vi /etc/zabbix/zabbix_agentd.conf
+    7  sudo systemctl start zabbix-agent
+    8  sudo systemctl enable zabbix-agent
+    9  sudo systemctl status zabbix-agent
+   10  history
+
+
+
